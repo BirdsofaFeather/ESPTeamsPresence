@@ -24,7 +24,9 @@ See this video for a short overview:
 Some technical details:  
 This projects implements the device login flow to authenticate against Microsoft Azure AD and to get a access token. Using this token, the device can call the Microsoft Graph API to get presence information for the authenticated user. The token is automatically refreshed so that it can run standalone for some time.
 
-Everything is implemented in C code for Arduino-style microcontrollers and runs directly on the cheap and powerful WiFi-connected ESP32 board. [Getting the hardware](https://toblum.github.io/ESPTeamsPresence/#/buy) is usually no problem.
+Everything is implemented in C code for Arduino-style microcontrollers and runs directly on the cheap and powerful WiFi-connected ESP32 board (including ESP32-C3). [Getting the hardware](https://toblum.github.io/ESPTeamsPresence/#/buy) is usually no problem.
+
+**Note**: This project now supports ESP32-C3 boards! See [ESP32-C3 documentation](docs/ESP32-C3.md) for details.
 
 [![Build and Setup](https://img.youtube.com/vi/DH3zN3nLk9w/0.jpg)](https://www.youtube.com/watch?v=DH3zN3nLk9w)
 
