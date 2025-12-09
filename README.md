@@ -28,6 +28,8 @@ Everything is implemented in C code for Arduino-style microcontrollers and runs 
 
 **Note**: This project now supports ESP32-C3 boards! See [ESP32-C3 documentation](docs/ESP32-C3.md) for details.
 
+**New**: OLED display support added! You can now connect an SSD1306 OLED display to show your Teams presence status. See [OLED Display documentation](docs/OLED-DISPLAY.md) for setup instructions.
+
 [![Build and Setup](https://img.youtube.com/vi/DH3zN3nLk9w/0.jpg)](https://www.youtube.com/watch?v=DH3zN3nLk9w)
 
 The build and setup procedure is extremely easy and well documented. The device consists of only two active parts and three wires and is powered via Micro-USB. It also features a cool retro-style web UI for configuration.
@@ -42,6 +44,8 @@ This project uses the following libraries from different authors:
 - [WS2812FX](https://github.com/kitesurfer1404/WS2812FX) by kitesurfer1404
 - [Docute](https://github.com/egoist/docute) by egoist
 - [NES.css](https://github.com/nostalgic-css/NES.css/) by nostalgic-css
+- [Adafruit SSD1306](https://github.com/adafruit/Adafruit_SSD1306) by Adafruit
+- [Adafruit GFX Library](https://github.com/adafruit/Adafruit-GFX-Library) by Adafruit
 
 Thanks to all the authors.
 

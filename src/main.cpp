@@ -12,6 +12,8 @@
 
 #include "FS.h"
 #include "SPIFFS.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <EEPROM.h>
@@ -20,6 +22,7 @@
 #include <IotWebConf.h>
 #include <NeoPixelBus.h>
 #include <WiFiClientSecure.h>
+#include <Wire.h>
 
 // Global settings
 // #define NUMLEDS 16							//
@@ -40,6 +43,24 @@
 
 #define DBG_PRINT(x) Serial.print(x)
 #define DBG_PRINTLN(x) Serial.println(x)
+
+// OLED Display Configuration
+// Special 0.42-inch OLED that uses 128x64 buffer with 72x40 visible area
+// Visible area offset calculated from position test: EFGH at (40,24), IJKL at
+// (52,36)
+#define SCREEN_WIDTH 128    // Buffer width (128x64 internally)
+#define SCREEN_HEIGHT 64    // Buffer height
+#define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
+#define SCREEN_ADDRESS 0x3C // I2C address (try 0x3D if 0x3C doesn't work)
+#define OLED_SDA 5          // GPIO5 for SDA (as shown on your display module)
+#define OLED_SCL 6          // GPIO6 for SCL (as shown on your display module)
+// Display offset for this special 0.42" variant
+// Calculated from test: IJKL at X=52 centered, EFGH at Y=24 on top
+#define DISPLAY_OFFSET_X 28 // Column offset (X=52 centered = offset ~28)
+#define DISPLAY_OFFSET_Y 24 // Row offset (Y=24 at top = offset 24)
+// Visible area dimensions (actual screen size)
+#define VISIBLE_WIDTH 72  // Actual visible width
+#define VISIBLE_HEIGHT 40 // Actual visible height
 
 #ifndef DISABLECERTCHECK
 // Tool to get certs: https://projects.petrucci.ch/esp32/
@@ -65,7 +86,7 @@ const char *rootCACertificateGraph =
     "A1UdEwEB/wQIMAYBAf8CAQAwdgYIKwYBBQUHAQEEajBoMCQGCCsGAQUFBzABhhho\n"
     "dHRwOi8vb2NzcC5kaWdpY2VydC5jb20wQAYIKwYBBQUHMAKGNGh0dHA6Ly9jYWNl\n"
     "cnRzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydEdsb2JhbFJvb3RDQS5jcnQwewYDVR0f\n"
-    "BHQwcjA3oDWgM4YxaHR0cDovL2NybDMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0R2xv\n"
+    "BHQwcjA3oDWgM4YxaHR0cDovL2NybTMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0R2xv\n"
     "YmFsUm9vdENBLmNybDA3oDWgM4YxaHR0cDovL2NybDQuZGlnaWNlcnQuY29tL0Rp\n"
     "Z2lDZXJ0R2xvYmFsUm9vdENBLmNybDAwBgNVHSAEKTAnMAcGBWeBDAEBMAgGBmeB\n"
     "DAECATAIBgZngQwBAgIwCAYGZ4EMAQIDMA0GCSqGSIb3DQEBCwUAA4IBAQB3MR8I\n"
@@ -108,7 +129,7 @@ const char *rootCACertificateLogin =
     "AjB2BggrBgEFBQcBAQRqMGgwJAYIKwYBBQUHMAGGGGh0dHA6Ly9vY3NwLmRpZ2lj\n"
     "ZXJ0LmNvbTBABggrBgEFBQcwAoY0aHR0cDovL2NhY2VydHMuZGlnaWNlcnQuY29t\n"
     "L0RpZ2lDZXJ0R2xvYmFsUm9vdEcyLmNydDBCBgNVHR8EOzA5MDegNaAzhjFodHRw\n"
-    "Oi8vY3JsMy5kaWdpY2VydC5jb20vRGlnaUNlcnRHbG9iYWxSb290RzIuY3JsMB0G\n"
+    "Oi8vY3rlMy5kaWdpY2VydC5jb20vRGlnaUNlcnRHbG9iYWxSb290RzIuY3JsMB0G\n"
     "A1UdIAQWMBQwCAYGZ4EMAQIBMAgGBmeBDAECAjANBgkqhkiG9w0BAQwFAAOCAQEA\n"
     "o9sJvBNLQSJ1e7VaG3cSZHBz6zjS70A1gVO1pqsmX34BWDPz1TAlOyJiLlA+eUF4\n"
     "B2OWHd3F//dJJ/3TaCFunjBhZudv3busl7flz42K/BG/eOdlg0kiUf07PCYY5/FK\n"
@@ -174,6 +195,9 @@ typedef NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> NeoPixelBusType;
 
 NeoPixelBusType *strip = nullptr; // Will be initialized in setup()
 int numberLeds = NUMLEDS;
+
+// OLED Display
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // OTA update
 HTTPUpdateServer httpUpdater;
@@ -309,6 +333,148 @@ void startMDNS() {
 #include "request_handler.h"
 #include "spiffs_webserver.h"
 
+/**
+ * OLED Display Functions
+ */
+void initDisplay() {
+  Wire.begin(OLED_SDA, OLED_SCL);
+
+  DBG_PRINT(F("Initializing OLED with offset X="));
+  DBG_PRINT(DISPLAY_OFFSET_X);
+  DBG_PRINT(F(", Y="));
+  DBG_PRINTLN(DISPLAY_OFFSET_Y);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    DBG_PRINTLN(F("SSD1306 allocation failed"));
+    return;
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+  display.println(F("Teams"));
+  display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y + 10);
+  display.println(F("Ready!"));
+  display.display();
+
+  DBG_PRINTLN(F("OLED Display initialized"));
+}
+
+// Optimized for special 0.42" OLED with offset (13, 14)
+// Uses 128x64 buffer but only 72x40 is visible
+void updateDisplay(const String &status, const String &activity) {
+  // Clear entire buffer
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  // All text must be offset by (DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y)
+  // to appear in the visible 72x40 window
+
+  // Line 1: Title (0-7 in visible area = 14-21 in buffer)
+  display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+  display.println(F("Teams"));
+
+  // Line 2-3: Status text (10-27 in visible area = 24-41 in buffer)
+  int statusY = DISPLAY_OFFSET_Y + 10;
+  display.setCursor(DISPLAY_OFFSET_X, statusY);
+
+  // Display status - use large text for short words
+  if (activity.equals("Available")) {
+    display.setTextSize(2);
+    display.println(F("Free"));
+  } else if (activity.equals("Busy")) {
+    display.setTextSize(2);
+    display.println(F("Busy"));
+  } else if (activity.equals("InACall") ||
+             activity.equals("InAConferenceCall")) {
+    display.setTextSize(2);
+    display.println(F("Call"));
+  } else if (activity.equals("InAMeeting")) {
+    display.setTextSize(1);
+    display.println(F("Meeting"));
+  } else if (activity.equals("Away")) {
+    display.setTextSize(2);
+    display.println(F("Away"));
+  } else if (activity.equals("BeRightBack")) {
+    display.setTextSize(1);
+    display.println(F("BRB"));
+  } else if (activity.equals("DoNotDisturb") ||
+             activity.equals("UrgentInterruptionsOnly")) {
+    display.setTextSize(2);
+    display.println(F("DND"));
+  } else if (activity.equals("Presenting")) {
+    display.setTextSize(1);
+    display.println(F("Present"));
+  } else if (activity.equals("Offline") || activity.equals("OffWork") ||
+             activity.equals("OutOfOffice")) {
+    display.setTextSize(1);
+    display.println(F("Offline"));
+  } else {
+    display.setTextSize(1);
+    display.println(F("Unknown"));
+  }
+
+  // Line 4: WiFi status at bottom (32-39 in visible area = 46-53 in buffer)
+  display.setTextSize(1);
+  display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y + 32);
+  if (WiFi.status() == WL_CONNECTED) {
+    // Display first 12 chars of SSID to fit on screen
+    String ssid = WiFi.SSID();
+    if (ssid.length() > 12) {
+      ssid = ssid.substring(0, 12);
+    }
+    display.print(ssid);
+  } else {
+    display.print(F("No WiFi"));
+  }
+
+  display.display();
+}
+
+// Simplified message display for special 0.42" screen with offset
+void displayMessage(const String &line1, const String &line2 = "",
+                    const String &line3 = "") {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  // Line 1 (0-7 in visible = 14-21 in buffer)
+  display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+  display.println(F("Teams"));
+
+  // Line 2 (10-17 in visible = 24-31 in buffer)
+  display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y + 10);
+  if (line1.length() > 12) {
+    display.println(line1.substring(0, 12));
+  } else {
+    display.println(line1);
+  }
+
+  // Line 3 (20-27 in visible = 34-41 in buffer) - if provided
+  if (line2.length() > 0) {
+    display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y + 20);
+    if (line2.length() > 12) {
+      display.println(line2.substring(0, 12));
+    } else {
+      display.println(line2);
+    }
+  }
+
+  // Line 4 (30-37 in visible = 44-51 in buffer) - if provided
+  if (line3.length() > 0) {
+    display.setCursor(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y + 30);
+    if (line3.length() > 12) {
+      display.println(line3.substring(0, 12));
+    } else {
+      display.println(line3);
+    }
+  }
+
+  display.display();
+}
+
 // NeoPixelBus Color definitions
 RgbColor colorRed(255, 0, 0);
 RgbColor colorGreen(0, 255, 0);
@@ -343,7 +509,7 @@ void setPresenceAnimation() {
   } else if (activity.equals("BeRightBack")) {
     setColor(colorOrange);
   } else if (activity.equals("Busy")) {
-    setColor(colorPurple);
+    setColor(colorRed);
   } else if (activity.equals("DoNotDisturb") ||
              activity.equals("UrgentInterruptionsOnly")) {
     setColor(colorPink);
@@ -457,6 +623,7 @@ void pollPresence() {
     retries = 0;
 
     setPresenceAnimation();
+    updateDisplay(availability, activity);
   }
 }
 
@@ -519,6 +686,7 @@ void statemachine() {
         iotWebConfState == IOTWEBCONF_STATE_AP_MODE) {
       DBG_PRINTLN(F("Detected AP mode"));
       setColor(colorWhite);
+      displayMessage("AP Mode", "Connect to WiFi:", thingName);
     }
     if (iotWebConfState == IOTWEBCONF_STATE_CONNECTING) {
       DBG_PRINTLN(F("WiFi connecting"));
@@ -530,6 +698,7 @@ void statemachine() {
   // Statemachine: Wifi connection start
   if (state == SMODEWIFICONNECTING && laststate != SMODEWIFICONNECTING) {
     setColor(colorBlue);
+    displayMessage("Connecting...", "Joining WiFi");
   }
 
   // Statemachine: After wifi is connected
@@ -539,12 +708,14 @@ void statemachine() {
     loadContext();
     // WiFi client
     DBG_PRINTLN(F("Wifi connected, waiting for requests ..."));
+    displayMessage("WiFi Connected", WiFi.SSID(), WiFi.localIP().toString());
   }
 
   // Statemachine: Devicelogin started
   if (state == SMODEDEVICELOGINSTARTED) {
     if (laststate != SMODEDEVICELOGINSTARTED) {
       setColor(colorPurple);
+      displayMessage("Device Login", "Use web portal", "to authenticate");
     }
     if (millis() >= tsPolling) {
       pollForToken();
@@ -587,6 +758,7 @@ void statemachine() {
   if (state == SMODEREFRESHTOKEN) {
     if (laststate != SMODEREFRESHTOKEN) {
       setColor(colorRed);
+      displayMessage("Refreshing", "Token refresh...");
     }
     if (millis() >= tsPolling) {
       boolean success = refreshToken();
@@ -631,6 +803,9 @@ void setup() {
   DBG_PRINTLN();
   DBG_PRINTLN(F("setup() Starting up..."));
   Serial.println("ESP32-C3 DEBUG: Step 1 - Serial working");
+
+  // Initialize OLED Display
+  initDisplay();
 
 // Serial.setDebugOutput(true);
 #ifdef DISABLECERTCHECK
