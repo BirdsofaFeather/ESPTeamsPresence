@@ -1,4 +1,4 @@
-# ESP32 Teams Presence Light
+# ESP8266 Teams Presence Light
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 ![](https://github.com/toblum/ESPTeamsPresence/workflows/BuildAndRelease/badge.svg)
@@ -13,7 +13,9 @@ I will keep this repository online for anyone interested in its current state, b
 
 ---
 
-**A standalone Microsoft Teams presence light based on ESP32 and RGB neopixel LEDs.**
+**A standalone Microsoft Teams presence light based on ESP8266 and RGB neopixel LEDs.**
+
+> **Note:** This fork has been updated to support **ESP8266** microcontrollers (like NodeMCU) and uses the standard **Adafruit NeoPixel** library instead of WS2812FX. See [ESP8266_MIGRATION.md](ESP8266_MIGRATION.md) for details.
 
 This project allows you to build a standalone device that visualizes your presence status from Microsoft Teams with colored LEDs. It's really easy to build and quite cheap.
 
@@ -37,7 +39,7 @@ The build and setup procedure is extremely easy and well documented. The device 
 This project uses the following libraries from different authors:
 - [IotWebConf](https://github.com/prampec/IotWebConf) by prampec
 - [ArduinoJson](https://github.com/bblanchon/ArduinoJson) by bblanchon
-- [WS2812FX](https://github.com/kitesurfer1404/WS2812FX) by kitesurfer1404
+- [Adafruit NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel) by Adafruit
 - [Docute](https://github.com/egoist/docute) by egoist
 - [NES.css](https://github.com/nostalgic-css/NES.css/) by nostalgic-css
 
