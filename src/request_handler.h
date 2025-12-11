@@ -20,10 +20,12 @@ boolean requestJsonApi(JsonDocument &doc, String url, String payload = "",
   WiFiClientSecure *client = new WiFiClientSecure;
 
 #ifndef DISABLECERTCHECK
+  static BearSSL::X509List certGraph(rootCACertificateGraph);
+  static BearSSL::X509List certLogin(rootCACertificateLogin);
   if (url.indexOf("graph.microsoft.com") > -1) {
-    client->setCACert(rootCACertificateGraph);
+    client->setTrustAnchors(&certGraph);
   } else {
-    client->setCACert(rootCACertificateLogin);
+    client->setTrustAnchors(&certLogin);
   }
 #else
   client->setInsecure();
@@ -37,8 +39,8 @@ boolean requestJsonApi(JsonDocument &doc, String url, String payload = "",
   DynamicJsonDocument emptyDoc(emptyCapacity);
 
   // DBG_PRINT("[HTTPS] begin...\n");
-  if (https.begin(*client, url)) { // HTTPS
-    https.setConnectTimeout(10000);
+  if (https.begin(*client, url)) {        // HTTPS
+    /* https.setConnectTimeout(10000); */ // Not supported on ESP8266 HTTPClient
     https.setTimeout(10000);
     https.useHTTP10(true);
 
@@ -272,7 +274,8 @@ void handleGetSettings() {
   responseDoc["data_pin"].set(paramDataPinValue);
 
   responseDoc["heap"].set(ESP.getFreeHeap());
-  responseDoc["min_heap"].set(ESP.getMinFreeHeap());
+  // responseDoc["min_heap"].set(ESP.getMinFreeHeap()); // Not supported on
+  // ESP8266
   responseDoc["sketch_size"].set(ESP.getSketchSize());
   responseDoc["free_sketch_space"].set(ESP.getFreeSketchSpace());
   responseDoc["flash_chip_size"].set(ESP.getFlashChipSize());

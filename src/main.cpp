@@ -16,8 +16,8 @@
 #include <EEPROM.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266mDNS.h>
-#include <FS.h>
 #include <IotWebConf.h>
+#include <LittleFS.h>
 #include <WiFiClientSecure.h>
 
 // Global settings
@@ -220,7 +220,7 @@ void saveContext() {
   contextDoc["refresh_token"] = refresh_token.c_str();
   contextDoc["id_token"] = id_token.c_str();
 
-  File contextFile = SPIFFS.open(CONTEXT_FILE, FILE_WRITE);
+  File contextFile = LittleFS.open(CONTEXT_FILE, "w");
   size_t bytesWritten = serializeJsonPretty(contextDoc, contextFile);
   contextFile.close();
   DBG_PRINT(F("saveContext() - Success: "));
@@ -229,7 +229,7 @@ void saveContext() {
 }
 
 boolean loadContext() {
-  File file = SPIFFS.open(CONTEXT_FILE);
+  File file = LittleFS.open(CONTEXT_FILE, "r");
   boolean success = false;
 
   if (!file) {
@@ -284,9 +284,9 @@ boolean loadContext() {
   return success;
 }
 
-// Remove context information file in SPIFFS
+// Remove context information file in LittleFS
 void removeContext() {
-  SPIFFS.remove(CONTEXT_FILE);
+  LittleFS.remove(CONTEXT_FILE);
   DBG_PRINTLN(F("removeContext() - Success"));
 }
 
@@ -804,11 +804,12 @@ void setup() {
   DBG_PRINTLN(F("setup() ready..."));
 
   // SPIFFS.begin() - Format if mount failed
-  DBG_PRINTLN(F("SPIFFS.begin() "));
-  if (!SPIFFS.begin()) {
-    DBG_PRINTLN("SPIFFS Mount Failed - Formatting...");
-    SPIFFS.format();
-    if (!SPIFFS.begin()) {
+  DBG_PRINTLN(F("LittleFS.begin() "));
+  // Filesystem
+  if (!LittleFS.begin()) {
+    DBG_PRINTLN(F("LittleFS.begin() failed, formatting ..."));
+    LittleFS.format();
+    if (!LittleFS.begin()) {
       DBG_PRINTLN("SPIFFS Mount Failed after format");
       return;
     }
