@@ -273,12 +273,13 @@ void handleRoot() {
 void handleGetSettings() {
   DBG_PRINTLN("handleGetSettings()");
 
-  const int capacity = JSON_OBJECT_SIZE(13);
+  const int capacity = JSON_OBJECT_SIZE(14);
   StaticJsonDocument<capacity> responseDoc;
   responseDoc["client_id"].set(paramClientIdValue);
   responseDoc["tenant"].set(paramTenantValue);
   responseDoc["poll_interval"].set(paramPollIntervalValue);
   responseDoc["num_leds"].set(paramNumLedsValue);
+  responseDoc["data_pin"].set(paramDataPinValue);
 
   responseDoc["heap"].set(ESP.getFreeHeap());
   responseDoc["min_heap"].set(ESP.getMinFreeHeap());
@@ -356,7 +357,7 @@ void onConfigSaved() {
 
   int newDataPin = atoi(paramDataPinValue);
   if (newDataPin < 0 || newDataPin > 21) {
-    newDataPin = DATAPIN; // Use default (13) if invalid
+    newDataPin = DATAPIN; // Use default (3) if invalid
   }
 
   // NeoPixelBus requires recreation if LED count or data pin changes

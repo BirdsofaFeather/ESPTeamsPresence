@@ -163,13 +163,13 @@ char paramNumLedsValue[INTEGER_LEN];
 char paramDataPinValue[INTEGER_LEN];
 IotWebConfSeparator separator = IotWebConfSeparator();
 IotWebConfParameter paramClientId = IotWebConfParameter(
-    "Client-ID (Generic ID: 3837bbf0-30fb-47ad-bce8-f460ba9880c3)", "clientId",
+    "Client-ID (Generic ID: d4fd1dc6-aa98-41f3-9b1a-b6a49358269e)", "clientId",
     paramClientIdValue, STRING_LEN, "text",
-    "e.g. 3837bbf0-30fb-47ad-bce8-f460ba9880c3",
-    "3837bbf0-30fb-47ad-bce8-f460ba9880c3");
-IotWebConfParameter paramTenant =
-    IotWebConfParameter("Tenant hostname / ID", "tenantId", paramTenantValue,
-                        STRING_LEN, "text", "e.g. contoso.onmicrosoft.com");
+    "e.g. d4fd1dc6-aa98-41f3-9b1a-b6a49358269e",
+    "d4fd1dc6-aa98-41f3-9b1a-b6a49358269e");
+IotWebConfParameter paramTenant = IotWebConfParameter(
+    "Tenant hostname / ID", "tenantId", paramTenantValue, STRING_LEN, "text",
+    "e.g. contoso.onmicrosoft.com", "common");
 IotWebConfParameter paramPollInterval = IotWebConfParameter(
     "Presence polling interval (sec) (default: 30)", "pollInterval",
     paramPollIntervalValue, INTEGER_LEN, "number", "5..300",
@@ -178,8 +178,8 @@ IotWebConfParameter paramNumLeds = IotWebConfParameter(
     "Number of LEDs (default: 16)", "numLeds", paramNumLedsValue, INTEGER_LEN,
     "number", "1..500", "16", "min='1' max='500' step='1'");
 IotWebConfParameter paramDataPin = IotWebConfParameter(
-    "LED Data Pin (GPIO, default: 13)", "dataPin", paramDataPinValue,
-    INTEGER_LEN, "number", "0..21", "13", "min='0' max='21' step='1'");
+    "LED Data Pin (GPIO, default: 3)", "dataPin", paramDataPinValue,
+    INTEGER_LEN, "number", "0..21", "3", "min='0' max='21' step='1'");
 byte lastIotWebConfState;
 
 // HTTP client
